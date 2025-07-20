@@ -3,11 +3,12 @@ const puppeteer = require('puppeteer');
 const path = require('path');
 
 const app = express();
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static files from the 'public' directory in the project root
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Serve the HTML for browser-based testing
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
 // OCR API endpoint
@@ -34,5 +35,5 @@ app.get('/ocr', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000; // Match Render's port
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
