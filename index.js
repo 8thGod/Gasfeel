@@ -1,24 +1,31 @@
 const express = require('express');
-const bodyParser = require('body-parser');
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
 const puter = require('./puter');
 
 const app = express();
+const upload = multer({ dest: 'uploads/' });
 const port = process.env.PORT || 3000;
 
-app.use(bodyParser.json());
+app.get('/', (req, res) => {
+  res.send('🧠 OCR API is running. Use POST /api/run');
+});
 
-app.post('/api/ocr', async (req, res) => {
-  const { imageUrl } = req.body;
-  if (!imageUrl) return res.status(400).json({ error: 'imageUrl is required' });
-
+app.post('/api/run', upload.single('image'), async (req, res) => {
   try {
-    const result = await puter(imageUrl);
+    const imagePath = path.resolve(req.file.path);
+    const result = await puter(imagePath);
+
+    // Clean up
+    fs.unlinkSync(imagePath);
+
     res.json({ success: true, result });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
 app.listen(port, () => {
-  console.log(`OCR API listening on port ${port}`);
+  console.log(`✅ OCR API listening on port ${port}`);
 });
