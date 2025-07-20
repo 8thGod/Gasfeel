@@ -1,33 +1,45 @@
 const express = require('express');
 const puppeteer = require('puppeteer');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
+
+// Log paths for debugging
+console.log('__dirname:', __dirname);
+console.log('Public path:', path.join(__dirname, '..', 'public'));
+console.log('index.html exists:', fs.existsSync(path.join(__dirname, '..', 'public', 'index.html')));
+
 // Serve static files from the 'public' directory in the project root
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Serve the HTML for browser-based testing
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+    const filePath = path.join(__dirname, '..', 'public', 'index.html');
+    if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+    } else {
+        res.status(404).json({ error: 'index.html not found' });
+    }
 });
 
-// OCR API endpoint
+// OCR API endpoint (handles both URLs and base64 data URIs)
 app.get('/ocr', async (req, res) => {
-    const imageUrl = req.query.url;
-    if (!imageUrl) {
-        return res.status(400).json({ error: 'No image URL provided' });
+    const imageInput = req.query.url;
+    if (!imageInput) {
+        return res.status(400).json({ error: 'No image input provided' });
     }
 
     try {
         const browser = await puppeteer.launch({
             headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox'] // Required for Render
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
         const page = await browser.newPage();
         await page.goto('data:text/html,<script src="https://js.puter.com/v2/"></script>', { waitUntil: 'networkidle0' });
-        const text = await page.evaluate(async (url) => {
-            return await puter.ai.img2txt(url);
-        }, imageUrl);
+        const text = await page.evaluate(async (input) => {
+            return await puter.ai.img2txt(input);
+        }, imageInput);
         await browser.close();
         res.json({ extractedText: text || 'No text found' });
     } catch (error) {
@@ -35,5 +47,5 @@ app.get('/ocr', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 10000; // Match Render's port
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
